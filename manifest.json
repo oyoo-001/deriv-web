@@ -1,0 +1,24 @@
+{
+  "name": "Pro Trader Terminal",
+  "short_name": "Pro Trader",
+  "description": "Professional Trading Interface for Deriv API",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d0e12",
+  "theme_color": "#0d0e12",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://deriv.com/static/005e81d77a064030616b7617b8f9e205/85731/logo-deriv-only.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://deriv.com/static/005e81d77a064030616b7617b8f9e205/85731/logo-deriv-only.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
