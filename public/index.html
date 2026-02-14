@@ -4,14 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pro Trader | Deriv API</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Pro Trader">
-    <meta name="theme-color" content="#0d0e12">
-   
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="https://deriv.com/static/005e81d77a064030616b7617b8f9e205/85731/logo-deriv-only.png">
-
+    <meta name="theme-color" content="#0d0e12">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <!-- Lucide Icons -->
@@ -1204,6 +1199,15 @@
         function switchAccount(token) { if (token === activeToken) return; activeToken = token; if (ws) ws.close(); activeTrades.clear(); activeMarkersMap.clear(); activePriceLines.clear(); tradeHistory = []; renderAccounts(); connectWS(activeToken); }
 
         init();
-    </script>
+   
+   // Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Registered'))
+            .catch(err => console.log('SW Registration Failed', err));
+    });
+}
+   </script>
 </body>
 </html>
