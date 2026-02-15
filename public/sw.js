@@ -1,4 +1,5 @@
-const CACHE_NAME = 'pro-trader-v2';
+
+const CACHE_NAME = 'pro-trader-v3';
 const urlsToCache = [
     '/',
     '/index.html',
