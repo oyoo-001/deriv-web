@@ -20,6 +20,8 @@ app.get('/callback', (req, res) => {
 app.get('/config', (req, res) => {
     res.json({ appId: APP_ID });
 });
+app.get('/ping', (req, res) => {
+    res.status(200).json({ status: 'ok' });});
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

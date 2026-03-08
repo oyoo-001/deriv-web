@@ -46,6 +46,7 @@
         .theme-bg-card { background-color: var(--bg-card); transition: background-color 0.3s; }
         .theme-bg-input { background-color: var(--bg-input); transition: background-color 0.3s; }
         .theme-border { border-color: var(--border-color); transition: border-color 0.3s; }
+        .theme-bg-border { background-color: var(--border-color); transition: background-color 0.3s; }
         .theme-text-sec { color: var(--text-secondary); }
         .theme-hover:hover { background-color: var(--hover-bg); }
 
@@ -126,6 +127,24 @@
         .bot-modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
 
     </style>
+    <style>
+        /* Confirmation Modal */
+        #confirmation-modal-overlay {
+            display: flex;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+        }
+        #confirmation-modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #confirmation-modal {
+            transform: scale(0.95);
+            transition: transform 0.2s ease-in-out;
+        }
+        #confirmation-modal-overlay.open #confirmation-modal { transform: scale(1); }
+    </style>
 </head>
 <body class="h-screen flex flex-col font-sans">
 
@@ -133,6 +152,18 @@
 
     <!-- Sidebar Overlay -->
     <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal-overlay" class="fixed inset-0 bg-black/60 z-[60] hidden items-center justify-center p-4" onclick="closeConfirmationModal()">
+        <div id="confirmation-modal" class="theme-bg-panel theme-border border rounded-xl shadow-2xl w-full max-w-sm p-6 text-center" onclick="event.stopPropagation()">
+            <h3 id="confirmation-title" class="text-lg font-bold mb-2">Confirm Action</h3>
+            <p id="confirmation-message" class="text-sm theme-text-sec mb-6">Are you sure?</p>
+            <div class="flex gap-4">
+                <button onclick="closeConfirmationModal()" class="flex-1 py-2 rounded-lg theme-bg-card theme-border border theme-hover font-bold text-sm transition">Cancel</button>
+                <button id="confirmation-confirm-btn" onclick="executeConfirmation()" class="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition">Confirm</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Sidebar -->
     <aside id="app-sidebar" class="sidebar theme-border border-r">
@@ -166,7 +197,16 @@
                 </div>
             </div>
 
-            <!-- About Us -->
+            <div>
+                <h3 class="text-xs font-bold uppercase theme-text-sec mb-2">About</h3>
+                <div class="p-3 rounded-lg theme-bg-card theme-border border text-sm space-y-2">
+                    <p class="text-xs theme-text-sec">
+                        An advanced, open-source trading terminal for Deriv. Featuring real-time charts, low-latency execution, and customizable trading bots.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Contact Us -->
             <div>
                 <h3 class="text-xs font-bold uppercase theme-text-sec mb-2">Contact Us</h3>
                 <div class="p-3 rounded-lg theme-bg-card theme-border border text-sm space-y-2">
@@ -189,7 +229,7 @@
 
         <!-- Footer -->
         <div class="p-4 theme-border border-t text-center">
-            <p class="text-[10px] theme-text-sec font-mono">Powered by <span class="font-bold text-blue-500">McOKOTH TECHNOLOGIES</span></p>
+            <p class="text-[10px] theme-text-sec font-mono">Powered by <span class="font-bold text-blue-500"><a href="https://https://deriv-web.onrender.com" target="_blank">McOKOTH TECHNOLOGIES</a></span></p>
         </div>
     </aside>
 
@@ -250,6 +290,7 @@
                 <select id="bot-strategy" class="w-full theme-bg-input theme-border border rounded p-2 text-sm font-bold focus:outline-none">
                     <option value="CALL">Rise (Call)</option>
                     <option value="PUT">Fall (Put)</option>
+                    <option value="ALTERNATE">Alternate Rise/Fall</option>
                     <option value="DIGITMATCH">Digit Match</option>
                     <option value="DIGITDIFF">Digit Differs</option>
                     <option value="DIGITEVEN">Digit Even</option>
@@ -391,10 +432,10 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+        <main id="main-layout" class="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
             
             <!-- Chart Area -->
-            <div class="h-[40vh] md:h-auto md:flex-1 relative theme-border border-b md:border-b-0 md:border-r overflow-hidden shrink-0 md:shrink">
+            <div id="chart-panel" class="h-[40vh] md:h-auto md:flex-1 relative theme-border border-b md:border-b-0 shrink-0 md:shrink z-10">
                 <div id="chart-container" class="absolute inset-0 z-0"></div>
                 
                 <!-- Floating Header: Symbol, Price, Eye Toggle -->
@@ -449,13 +490,19 @@
                 </div>
             </div>
 
+            <!-- Resizer Handle -->
+            <div id="resizer-handle" class="hidden md:block w-1 theme-bg-border hover:bg-blue-500 cursor-col-resize transition-colors z-40 shrink-0"></div>
+
             <!-- Controls Panel -->
-            <div class="flex-1 md:w-[340px] theme-bg-panel flex flex-col shrink-0 min-h-0">
+            <div id="controls-panel" class="flex-1 md:w-[260px] theme-bg-panel flex flex-col shrink-0 min-h-0">
                 
                 <!-- Tabs -->
                 <div class="flex theme-border border-b shrink-0">
                     <button onclick="switchTab('trade')" id="tab-btn-trade" class="flex-1 py-3 text-xs font-bold tracking-wider border-b-2 border-red-500 transition">TRADE</button>
-                    <button onclick="switchTab('history')" id="tab-btn-history" class="flex-1 py-3 text-xs font-bold tracking-wider theme-text-sec border-b-2 border-transparent hover:opacity-80 transition">HISTORY</button>
+                    <button onclick="switchTab('history')" id="tab-btn-history" class="flex-1 py-3 text-xs font-bold tracking-wider theme-text-sec border-b-2 border-transparent hover:opacity-80 transition flex items-center justify-center gap-2">
+                        <span>HISTORY</span>
+                        <span id="history-badge" class="hidden bg-gray-700 text-gray-300 text-[9px] font-bold px-1.5 rounded-full">0</span>
+                    </button>
                 </div>
 
                 <!-- Tab Content -->
@@ -465,7 +512,7 @@
                     <div id="tab-content-trade" class="flex flex-col gap-4">
                         <div>
                             <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Market Type</label>
-                            <select id="trade-category" onchange="toggleTradeInputs()" class="w-full theme-bg-input theme-border border rounded-lg p-3 focus:outline-none focus:border-red-500 text-sm font-bold">
+                            <select id="trade-category" onchange="toggleTradeInputs()" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
                                 <option value="RISEFALL">Rise / Fall</option>
                                 <option value="EVENODD">Even / Odd</option>
                                 <option value="DIGITS">Digits (Match/Differ)</option>
@@ -473,21 +520,19 @@
                             </select>
                         </div>
 
-                        <div class="flex gap-4">
-                            <div class="flex-grow">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
                                 <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Stake ($)</label>
-                            <input id="stake" type="number" value="0.35" placeholder="min 0.35" step="0.01" onchange="updatePayouts()" class="w-full theme-bg-input theme-border border rounded-lg p-3 focus:outline-none focus:border-red-500 text-lg font-bold">
+                                <input id="stake" type="number" value="0.35" placeholder="min 0.35" step="0.01" onchange="updatePayouts()" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
                             </div>
-                            <div class="w-40 flex gap-2">
-                                <div class="flex-grow">
-                                    <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Duration</label>
-                                    <div class="flex rounded-lg overflow-hidden theme-border border">
-                                        <input id="duration-val" type="number" value="1" onchange="updatePayouts()" class="w-12 theme-bg-input p-3 text-center focus:outline-none text-lg font-bold theme-border border-r">
-                                        <select id="duration-unit" onchange="updatePayouts()" class="theme-bg-input focus:outline-none text-sm font-bold pl-2 pr-6">
-                                            <option value="t">Ticks</option>
-                                            <option value="m">Min</option>
-                                        </select>
-                                    </div>
+                            <div>
+                                <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Duration</label>
+                                <div class="flex rounded-lg overflow-hidden theme-border border">
+                                    <input id="duration-val" type="number" value="1" onchange="updatePayouts()" class="w-12 theme-bg-input p-2 text-center focus:outline-none text-sm font-bold theme-border border-r">
+                                    <select id="duration-unit" onchange="updatePayouts()" class="theme-bg-input focus:outline-none text-sm font-bold pl-2 pr-6 flex-1">
+                                        <option value="t">Ticks</option>
+                                        <option value="m">Min</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -506,44 +551,44 @@
 
                         <!-- Action Sections -->
                         <div id="action-risefall" class="grid grid-cols-2 gap-3 mt-2">
-                            <button onclick="trade('CALL')" class="bg-[#00ffad] text-black font-black py-4 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
+                            <button onclick="trade('CALL')" class="bg-[#00ffad] text-black font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm flex items-center gap-1"><i data-lucide="trending-up" class="w-4 h-4"></i> RISE</span>
                                 <span id="payout-call" class="text-[10px] opacity-70">...</span>
                             </button>
-                            <button onclick="trade('PUT')" class="bg-[#ff4444] text-white font-black py-4 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
+                            <button onclick="trade('PUT')" class="bg-[#ff4444] text-white font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm flex items-center gap-1"><i data-lucide="trending-down" class="w-4 h-4"></i> FALL</span>
                                 <span id="payout-put" class="text-[10px] opacity-70">...</span>
                             </button>
                         </div>
 
                         <div id="action-evenodd" class="hidden grid grid-cols-2 gap-3 mt-2">
-                            <button onclick="trade('DIGITEVEN')" class="bg-[#3b82f6] text-white font-black py-4 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center border border-blue-400">
+                            <button onclick="trade('DIGITEVEN')" class="bg-[#3b82f6] text-white font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center border border-blue-400">
                                 <span class="text-sm">EVEN</span>
                                 <span id="payout-even" class="text-[10px] opacity-70">...</span>
                             </button>
-                            <button onclick="trade('DIGITODD')" class="bg-[#8b5cf6] text-white font-black py-4 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center border border-purple-400">
+                            <button onclick="trade('DIGITODD')" class="bg-[#8b5cf6] text-white font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center border border-purple-400">
                                 <span class="text-sm">ODD</span>
                                 <span id="payout-odd" class="text-[10px] opacity-70">...</span>
                             </button>
                         </div>
 
                         <div id="action-digits" class="hidden grid grid-cols-2 gap-3">
-                            <button onclick="trade('DIGITMATCH')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-3 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
+                            <button onclick="trade('DIGITMATCH')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-2 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Matches</span>
                                 <span id="payout-match" class="text-[9px] opacity-70">...</span>
                             </button>
-                            <button onclick="trade('DIGITDIFF')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-3 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
+                            <button onclick="trade('DIGITDIFF')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-2 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Differs</span>
                                 <span id="payout-diff" class="text-[9px] opacity-70">...</span>
                             </button>
                         </div>
 
                         <div id="action-overunder" class="hidden grid grid-cols-2 gap-3">
-                            <button onclick="trade('DIGITOVER')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-3 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
+                            <button onclick="trade('DIGITOVER')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-2 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Over</span>
                                 <span id="payout-over" class="text-[9px] opacity-70">...</span>
                             </button>
-                            <button onclick="trade('DIGITUNDER')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-3 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
+                            <button onclick="trade('DIGITUNDER')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-2 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Under</span>
                                 <span id="payout-under" class="text-[9px] opacity-70">...</span>
                             </button>
@@ -553,10 +598,16 @@
 
                     <!-- HISTORY TAB -->
                     <div id="tab-content-history" class="hidden flex flex-col gap-2">
+                        <div id="active-trades-header" class="hidden theme-border border-b pb-1 mb-2 flex justify-between items-center">
+                            <span class="text-[10px] font-bold theme-text-sec uppercase tracking-widest">Active Positions</span>
+                            <button onclick="closeAllTrades()" class="text-[10px] text-yellow-500 hover:text-yellow-400 font-bold uppercase transition">Close All</button>
+                        </div>
                         <div id="active-trades-list" class="flex flex-col gap-2 mb-4"></div>
-                        <div id="finished-trades-header" class="hidden flex justify-between items-end theme-border border-b pb-1 mb-2">
+
+                        <div id="finished-trades-header" class="hidden flex justify-between items-end theme-border border-b pb-1 mb-2 pt-4">
                             <span class="text-[10px] font-bold theme-text-sec uppercase tracking-widest">Finished Trades</span>
-                            <button onclick="clearHistory()" class="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase transition">Clear</button>
+                            <button onclick="clearHistory()" class="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase transition">Clear
+                                History</button>
                         </div>
                         <div id="finished-trades-list" class="flex flex-col gap-2 opacity-70"></div>
                     </div>
@@ -586,6 +637,7 @@
         let timerInterval;
         let isLightMode = false;
         let proposalStreamIds = [];
+        let confirmAction = null;
         let botContractIds = new Set();
         let chartData = [];
 
@@ -631,7 +683,7 @@
                 
                 // Cleanup: Remove any sold contracts from activeTrades that might have stuck
                 activeTrades.forEach((c, id) => {
-                    if (!c || typeof c !== 'object' || c.is_sold) {
+                    if (!c || typeof c !== 'object' || c.is_sold || !c.contract_id) {
                         activeTrades.delete(id);
                     }
                 });
@@ -664,6 +716,7 @@
                 }
 
                 renderTrades();
+                updateHistoryBadge();
             } catch (e) { console.error("Load Session Failed", e); }
         }
 
@@ -685,11 +738,80 @@
                 document.getElementById('auth-section').classList.add('hidden');
                 document.getElementById('trading-section').classList.remove('hidden');
                 renderAccounts();
+                fetchAccountBalances(); // Fetch balances for dropdown
                 setupChart();
+
+                // Restore visual state for active trades from session
+                activeTrades.forEach(contract => {
+                    if (contract.underlying === currentSymbol && contract.entry_spot && !contract.is_sold && ['CALL', 'PUT'].includes(contract.contract_type)) {
+                        createEntryLine(contract.contract_id, contract.entry_spot);
+                    }
+                });
+
                 connectWS(activeToken);
                 lucide.createIcons();
                 startGlobalTimer();
             }
+        }
+
+        // --- Balance Fetching for Account Dropdown ---
+        async function fetchAccountBalances() {
+            await Promise.all(accounts.map(async (acc) => {
+                try {
+                    const balance = await getBalanceForToken(acc.token);
+                    acc.balance = balance.balance;
+                    acc.currency = balance.currency;
+                } catch (error) {
+                    console.error(`Failed to get balance for ${acc.id}`, error);
+                    acc.balance = 'Error';
+                    acc.currency = '';
+                } finally {
+                    renderAccounts();
+                }
+            }));
+        }
+
+        function getBalanceForToken(token) {
+            return new Promise((resolve, reject) => {
+                const tempWs = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${appId}`);
+                const timeout = setTimeout(() => {
+                    tempWs.close();
+                    reject(new Error('Timeout while fetching balance.'));
+                }, 10000); // 10 second timeout
+
+                tempWs.onopen = () => { tempWs.send(JSON.stringify({ authorize: token })); };
+
+                tempWs.onmessage = (msg) => {
+                    const data = JSON.parse(msg.data);
+                    if (data.error) { clearTimeout(timeout); tempWs.close(); reject(data.error); return; }
+                    if (data.msg_type === 'authorize') {
+                        tempWs.send(JSON.stringify({ balance: 1 }));
+                    }
+                    if (data.msg_type === 'balance') {
+                        clearTimeout(timeout); tempWs.close(); resolve(data.balance);
+                    }
+                };
+
+                tempWs.onerror = (err) => { clearTimeout(timeout); tempWs.close(); reject(err); };
+            });
+        }
+
+        // --- Confirmation Modal ---
+        function showConfirmationModal(message, onConfirm, title = 'Confirm Action') {
+            document.getElementById('confirmation-title').innerText = title;
+            document.getElementById('confirmation-message').innerText = message;
+            confirmAction = onConfirm;
+            document.getElementById('confirmation-modal-overlay').classList.add('open');
+        }
+
+        function closeConfirmationModal() {
+            document.getElementById('confirmation-modal-overlay').classList.remove('open');
+            confirmAction = null;
+        }
+
+        function executeConfirmation() {
+            if (typeof confirmAction === 'function') { confirmAction(); }
+            closeConfirmationModal();
         }
 
         // --- Sidebar & Bot UI Logic ---
@@ -867,6 +989,14 @@
                 if (data.msg_type === 'balance' && data.balance) {
                     currentBalance = data.balance.balance;
                     document.getElementById('balance').innerText = `${data.balance.currency} ${currentBalance.toLocaleString()}`;
+
+                    // Update balance in the accounts array for the dropdown
+                    const activeAccount = accounts.find(acc => acc.token === activeToken);
+                    if (activeAccount) {
+                        activeAccount.balance = data.balance.balance;
+                        activeAccount.currency = data.balance.currency;
+                        renderAccounts();
+                    }
                 }
 
                 if (data.msg_type === 'proposal' && data.proposal) {
@@ -992,13 +1122,20 @@
                 return;
             }
 
+            // Determine the actual contract type based on the strategy
+            let contractType = botState.strategy;
+            if (botState.strategy === 'ALTERNATE') {
+                contractType = (botState.runsCount % 2 === 0) ? 'CALL' : 'PUT';
+                logBot(`Run #${botState.runsCount + 1}: Placing a ${contractType} trade.`, 'info');
+            }
+
             const params = {
                 buy: 1,
                 price: botState.stake,
                 parameters: {
                     amount: botState.stake,
                     basis: 'stake',
-                    contract_type: botState.strategy,
+                    contract_type: contractType, // Use the determined contract type
                     currency: 'USD',
                     symbol: currentSymbol,
                     duration: botState.duration,
@@ -1137,27 +1274,25 @@
         }
 
         function handleContractUpdate(contract) {
-            if (!contract) return;
+            if (!contract || !contract.contract_id) return;
             const id = contract.contract_id;
-
             const isSold = contract.is_sold;
-            const profit = parseFloat(contract.profit);
+            const profit = parseFloat(contract.profit || 0);
 
             if (contract.tick_stream) contract.tick_passed = contract.tick_stream.length;
             
-            activeTrades.set(id, contract);
-            renderTrades();
+            const existingCard = document.getElementById(`trade-card-${id}`);
 
-            if (contract.entry_spot && !contract.is_sold && ['CALL', 'PUT'].includes(contract.contract_type)) {
+            // Update chart price line for active CALL/PUT contracts
+            if (contract.entry_spot && !isSold && ['CALL', 'PUT'].includes(contract.contract_type)) {
                 if (contract.underlying === currentSymbol) {
                     createEntryLine(id, contract.entry_spot);
-                    if (activePriceLines.has(id)) {
-                        const line = activePriceLines.get(id);
-                        const pVal = parseFloat(profit);
+                    const line = activePriceLines.get(id);
+                    if (line) {
                         line.applyOptions({ 
-                            title: `${pVal > 0 ? '+' : ''}${pVal.toFixed(2)}`,
-                            color: pVal >= 0 ? '#00ffad' : '#ff4444',
-                            axisLabelTextColor: pVal >= 0 ? '#000000' : '#ffffff',
+                            title: `${profit > 0 ? '+' : ''}${profit.toFixed(2)}`,
+                            color: profit >= 0 ? '#00ffad' : '#ff4444',
+                            axisLabelTextColor: profit >= 0 ? '#000000' : '#ffffff',
                             lineWidth: 2
                         });
                     }
@@ -1165,29 +1300,62 @@
             }
 
             if (isSold) {
-                // Improved Bot Loop Completion Detection
+                // --- Contract is Finished ---
+                if (existingCard) existingCard.remove();
+
+                // Move from active state to history state
+                activeTrades.delete(id);
+                tradeHistory.unshift(contract);
+                if (activeTrades.size === 0) {
+                    document.getElementById('active-trades-header').classList.add('hidden');
+                }
+
+                // Add card to history UI
+                const finishedListEl = document.getElementById('finished-trades-list');
+                finishedListEl.insertAdjacentHTML('afterbegin', createTradeCard(contract));
+                document.getElementById('finished-trades-header').classList.remove('hidden');
+                lucide.createIcons();
+
+                // Handle bot logic if applicable
                 const isBotTrade = botContractIds.has(id);
                 if (botState.running && isBotTrade) {
                     botContractIds.delete(id);
                     processBotResult(contract);
                 }
 
-               if (contract.status !== 'complete_handled') {
+                // Final cleanup for sold contract
+                if (contract.status !== 'complete_handled') {
                     contract.status = 'complete_handled';
                     if (!(botState.running && isBotTrade)) {
                         showToast(`Contract #${id} Closed: ${profit >= 0 ? 'WIN' : 'LOSS'} ($${Math.abs(profit).toFixed(2)})`, profit >= 0 ? 'success' : 'error');
-                   }
+                    }
                     removeEntryLine(id);
                     activeMarkersMap.delete(id);
                     updateChartMarkers();
-                    
-                    activeTrades.delete(id); // Remove from active
-                    tradeHistory.unshift(contract);
-                    // Refresh balance to be sure
-                   ws.send(JSON.stringify({ balance: 1 }));
+                    ws.send(JSON.stringify({ balance: 1 }));
+                }
+            } else {
+                // --- Contract is Active/Running ---
+                activeTrades.set(id, contract);
+
+                if (existingCard) {
+                    // Update existing card in place
+                    const profitEl = existingCard.querySelector('.profit-value');
+                    if (profitEl) {
+                        const pColor = profit >= 0 ? 'text-[#00ffad]' : 'text-[#ff4444]';
+                        profitEl.className = `profit-value text-sm font-black ${pColor}`;
+                        profitEl.innerText = `${profit > 0 ? '+' : ''}${profit.toFixed(2)}`;
+                    }
+                } else {
+                    // Create new card for new active trade
+                    const activeListEl = document.getElementById('active-trades-list');
+                    activeListEl.insertAdjacentHTML('afterbegin', createTradeCard(contract));
+                    document.getElementById('active-trades-header').classList.remove('hidden');
+                    lucide.createIcons();
                 }
             }
             saveSession();
+            updateHistoryBadge();
         }
 
         function updatePayouts() {
@@ -1264,21 +1432,40 @@
             ws.send(JSON.stringify(params));
         }
 
-        function sellContract(id, manual = false) { 
+        function sellContract(id) { 
             ws.send(JSON.stringify({ sell: id, price: 0 })); 
         }
         
+        function closeAllTrades() {
+            const sellableTrades = Array.from(activeTrades.values()).filter(c => c.is_valid_to_sell === 1 && !c.is_sold);
+            if (sellableTrades.length === 0) {
+                showToast("No active positions available to close.", "info");
+                return;
+            }
+            
+            showConfirmationModal(`Are you sure you want to close all ${sellableTrades.length} active positions?`, () => {
+                sellableTrades.forEach(c => sellContract(c.contract_id));
+                showToast(`Closing ${sellableTrades.length} positions...`, "success");
+            }, 'Close All Positions');
+        }
+
         function clearHistory() {
-            if(!confirm("Clear all trade history?")) return;
-            tradeHistory = [];
-            localStorage.removeItem('tradeHistory');
-            renderTrades();
+            if (tradeHistory.length === 0) { showToast("History is already empty.", "info"); return; }
+            showConfirmationModal('This will clear all finished trades from view. Are you sure?', () => {
+                tradeHistory = [];
+                localStorage.removeItem('tradeHistory');
+                document.getElementById('finished-trades-list').innerHTML = '';
+                document.getElementById('finished-trades-header').classList.add('hidden');
+                updateHistoryBadge();
+                showToast("Trade history cleared.", "info");
+            }, 'Clear History');
         }
 
         function renderTrades() {
             const activeListEl = document.getElementById('active-trades-list');
             const finishedListEl = document.getElementById('finished-trades-list');
             const finishedHeader = document.getElementById('finished-trades-header');
+            const activeHeader = document.getElementById('active-trades-header');
             
             let activeHTML = '';
             activeTrades.forEach((c) => {
@@ -1295,12 +1482,19 @@
             activeListEl.innerHTML = activeHTML; 
             finishedListEl.innerHTML = finishedHTML;
 
+            if (activeHTML) {
+                activeHeader.classList.remove('hidden');
+            } else {
+                activeHeader.classList.add('hidden');
+            }
+
             if (finishedHTML) {
                 finishedHeader.classList.remove('hidden');
             } else {
                 finishedHeader.classList.add('hidden');
             }
             lucide.createIcons();
+            updateHistoryBadge();
         }
 
         function createTradeCard(c) {
@@ -1312,11 +1506,29 @@
             const timeDisplay = c.is_sold 
                 ? `<span class="text-gray-400 font-mono">${new Date((c.sell_time || c.date_expiry || Date.now()/1000) * 1000).toLocaleTimeString()}</span>` 
                 : `<span id="timer-${id}" class="text-orange-400 font-mono">--</span>`;
+            const statusText = c.is_sold ? (profit>=0 ? 'WON' : 'LOST') : 'RUNNING';
+            const statusColor = c.is_sold ? (profit>=0 ? 'text-green-600' : 'text-red-600') : 'text-blue-400';
 
-            return `<div class="theme-bg-card p-3 rounded-lg theme-border border flex justify-between items-center shadow-lg relative overflow-hidden group">
-                    ${c.is_valid_to_sell === 1 && !c.is_sold ? `<div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center z-10"><button onclick="sellContract(${id}, true)" class="bg-white text-black text-xs font-bold px-3 py-1 rounded">CLOSE</button></div>` : ''}
+            return `<div id="trade-card-${id}" class="theme-bg-card p-3 rounded-lg theme-border border flex justify-between items-center shadow-lg relative overflow-hidden group">
+                    ${c.is_valid_to_sell === 1 && !c.is_sold ? `<div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center z-10"><button onclick="showConfirmationModal('Close position #${id} for the current profit/loss?', () => sellContract(${id}))" class="bg-white text-black text-xs font-bold px-3 py-1 rounded">CLOSE</button></div>` : ''}
                     <div><div class="flex items-center gap-2"><span class="text-xs font-bold theme-text-sec theme-bg-panel px-1 rounded">${displayName}</span><span class="text-[10px] theme-text-sec font-mono">#${id}</span></div><div class="mt-1 text-xs font-bold theme-text-sec flex items-center gap-2">${type} <span class="theme-text-sec">|</span> <i data-lucide="clock" class="w-3 h-3 theme-text-sec"></i> ${timeDisplay}</div></div>
-                    <div class="text-right z-0"><div class="text-sm font-black ${pColor}">${profit > 0 ? '+' : ''}${profit.toFixed(2)}</div><div class="text-[9px] uppercase font-bold tracking-wider ${c.is_sold ? (profit>=0 ? 'text-green-600' : 'text-red-600') : 'text-blue-400'}">${c.is_sold ? (profit>=0 ? 'WON' : 'LOST') : 'RUNNING'}</div></div></div>`;
+                    <div class="text-right z-0">
+                        <div class="profit-value text-sm font-black ${pColor}">${profit > 0 ? '+' : ''}${profit.toFixed(2)}</div>
+                        <div class="status-text text-[9px] uppercase font-bold tracking-wider ${statusColor}">${statusText}</div>
+                    </div>
+                </div>`;
+        }
+
+        function updateHistoryBadge() {
+            const badge = document.getElementById('history-badge');
+            if (!badge) return;
+            const totalTrades = activeTrades.size + tradeHistory.length;
+            if (totalTrades > 0) {
+                badge.innerText = totalTrades;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
         }
 
         function switchTab(tabName) {
@@ -1401,10 +1613,67 @@
 
         function renderAccounts() {
             const container = document.getElementById('account-list-container');
-            container.innerHTML = accounts.map(acc => `<div onclick="switchAccount('${acc.token}')" class="p-3 hover:bg-[#2a2e39] cursor-pointer border-b border-gray-800 last:border-0 flex justify-between items-center"><div><div class="text-xs font-mono font-bold">${acc.id}</div><div class="text-[9px] uppercase ${acc.id.startsWith('VR') ? 'text-blue-400' : 'text-orange-400'}">${acc.id.startsWith('VR') ? 'Demo' : 'Real'}</div></div>${acc.token === activeToken ? '<div class="w-2 h-2 bg-green-500 rounded-full"></div>' : ''}</div>`).join('');
+            container.innerHTML = accounts.map(acc => {
+                const balanceDisplay = acc.balance === 'Error'
+                    ? `<div class="text-xs text-red-500">Error</div>`
+                    : (acc.balance !== undefined
+                        ? `<div class="text-sm font-bold ${acc.balance >= 0 ? 'text-green-400' : 'text-red-400'}">${(acc.currency || '')} ${acc.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>`
+                        : `<div class="text-xs text-gray-500 animate-pulse">Loading...</div>`);
+                
+                const isActive = acc.token === activeToken;
+
+                return `<div onclick="switchAccount('${acc.token}')" class="relative p-3 hover:bg-[#2a2e39] cursor-pointer border-b border-gray-800 last:border-0 flex justify-between items-center ${isActive ? 'bg-gray-700/50' : ''}">
+                            <div>
+                                <div class="text-sm font-mono font-bold">${acc.id}</div>
+                                <div class="text-[9px] uppercase ${acc.id.startsWith('VR') ? 'text-blue-400' : 'text-orange-400'}">${acc.id.startsWith('VR') ? 'Demo' : 'Real'}</div>
+                            </div>
+                            <div class="text-right">${balanceDisplay}</div>
+                            ${isActive ? '<div class="absolute left-0 top-0 h-full w-1 bg-green-500"></div>' : ''}
+                        </div>`;
+            }).join('');
         }
 
         function switchAccount(token) { if (token === activeToken) return; activeToken = token; if (ws) ws.close(); activeTrades.clear(); activeMarkersMap.clear(); activePriceLines.clear(); tradeHistory = []; renderAccounts(); connectWS(activeToken); }
+
+        // --- Resizer Logic ---
+        const resizer = document.getElementById('resizer-handle');
+        const controlsPanel = document.getElementById('controls-panel');
+        const mainLayout = document.getElementById('main-layout');
+        
+        if (resizer && controlsPanel && mainLayout) {
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                resizer.classList.add('!bg-blue-500');
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                
+                const containerRect = mainLayout.getBoundingClientRect();
+                const newWidth = containerRect.right - e.clientX;
+                
+                if (newWidth > 200 && newWidth < containerRect.width * 0.6) {
+                    controlsPanel.style.width = `${newWidth}px`;
+                    controlsPanel.style.flex = 'none';
+                    if (chart) {
+                        const chartContainer = document.getElementById('chart-container');
+                        if(chartContainer) chart.resize(chartContainer.clientWidth, chartContainer.clientHeight);
+                    }
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    resizer.classList.remove('!bg-blue-500');
+                }
+            });
+        }
 
         init();
    
