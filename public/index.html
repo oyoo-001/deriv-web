@@ -165,6 +165,28 @@
         </div>
     </div>
 
+    <!-- About Panel Modal -->
+    <div id="about-overlay" class="sidebar-overlay" onclick="toggleAboutPanel()"></div>
+    <div id="about-modal" class="bot-modal theme-border">
+        <div class="p-4 theme-border border-b flex justify-between items-center bg-gray-900/50 rounded-t-lg">
+            <div class="flex items-center gap-2">
+                <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
+                <h2 class="font-bold text-lg">About Pro Trader</h2>
+            </div>
+            <button onclick="toggleAboutPanel()" class="p-1 rounded theme-hover transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-4 text-sm theme-text-sec">
+            <p>An advanced, open-source trading terminal for Deriv. Featuring real-time charts, low-latency execution, and customizable trading bots.</p>
+            <p>This platform is designed for professional traders who require speed, precision, and advanced tools to navigate the financial markets.</p>
+            <div class="pt-4 mt-4 border-t theme-border">
+                 <p class="text-xs">Powered by <span class="font-bold text-blue-500"><a href="https://mcokothtechnologies.onrender.com" target="_blank" class="underline">McOKOTH TECHNOLOGIES</a></span></p>
+                 <p class="text-xs mt-2">Version: 1.0.0</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <aside id="app-sidebar" class="sidebar theme-border border-r">
         <div class="p-4 theme-border border-b flex justify-between items-center">
@@ -197,15 +219,11 @@
                 </div>
             </div>
 
-            <div>
-                <h3 class="text-xs font-bold uppercase theme-text-sec mb-2">About</h3>
-                <div class="p-3 rounded-lg theme-bg-card theme-border border text-sm space-y-2">
-                    <p class="text-xs theme-text-sec">
-                        An advanced, open-source trading terminal for Deriv. Featuring real-time charts, low-latency execution, and customizable trading bots.
-                    </p>
-                </div>
-            </div>
+        
 
+            <button onclick="toggleAboutPanel()" class="w-full text-left p-3 rounded-lg theme-hover transition text-sm font-medium flex items-center gap-3">
+                <i data-lucide="info" class="w-4 h-4 text-blue-500"></i> About Pro Trader
+            </button>
             <!-- Contact Us -->
             <div>
                 <h3 class="text-xs font-bold uppercase theme-text-sec mb-2">Contact Us</h3>
@@ -812,6 +830,11 @@
         function executeConfirmation() {
             if (typeof confirmAction === 'function') { confirmAction(); }
             closeConfirmationModal();
+        }
+
+        function toggleAboutPanel() {
+            document.getElementById('about-modal').classList.toggle('open');
+            document.getElementById('about-overlay').classList.toggle('open');
         }
 
         // --- Sidebar & Bot UI Logic ---
@@ -1690,5 +1713,6 @@ app.get('/ping', (req, res) => {
     res.status(200).json({ status: 'ok' });});
 
   </script>
+</script>
 </body>
 </html>
