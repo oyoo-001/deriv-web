@@ -476,13 +476,13 @@
                         <div class="flex gap-4">
                             <div class="flex-grow">
                                 <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Stake ($)</label>
-                            <input id="stake" type="number" value="10" min="0.35" step="0.01" onchange="updatePayouts()" class="w-full theme-bg-input theme-border border rounded-lg p-3 focus:outline-none focus:border-red-500 text-lg font-bold">
+                            <input id="stake" type="number" value="0.35" placeholder="min 0.35" step="0.01" onchange="updatePayouts()" class="w-full theme-bg-input theme-border border rounded-lg p-3 focus:outline-none focus:border-red-500 text-lg font-bold">
                             </div>
                             <div class="w-40 flex gap-2">
                                 <div class="flex-grow">
                                     <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Duration</label>
                                     <div class="flex rounded-lg overflow-hidden theme-border border">
-                                        <input id="duration-val" type="number" value="5" onchange="updatePayouts()" class="w-12 theme-bg-input p-3 text-center focus:outline-none text-lg font-bold theme-border border-r">
+                                        <input id="duration-val" type="number" value="1" onchange="updatePayouts()" class="w-12 theme-bg-input p-3 text-center focus:outline-none text-lg font-bold theme-border border-r">
                                         <select id="duration-unit" onchange="updatePayouts()" class="theme-bg-input focus:outline-none text-sm font-bold pl-2 pr-6">
                                             <option value="t">Ticks</option>
                                             <option value="m">Min</option>
@@ -1416,6 +1416,10 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('SW Registration Failed', err));
     });
 }
-   </script>
+  
+app.get('/ping', (req, res) => {
+    res.status(200).json({ status: 'ok' });});
+
+  </script>
 </body>
 </html>
