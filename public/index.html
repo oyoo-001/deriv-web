@@ -863,6 +863,8 @@
         let timerInterval;
         let isLightMode = false;
         let proposalStreamIds = [];
+        let chartRefreshInterval = null;
+        const CHART_REFRESH_MS = 250; // Refresh chart every 250ms for real-time ticks
         let confirmAction = null;
         let botContractIds = new Set();
         let chartData = [];
@@ -1242,12 +1244,66 @@
                 grid: { vertLines: { color: isLightMode ? '#e5e7eb' : '#16181e' }, horzLines: { color: isLightMode ? '#e5e7eb' : '#16181e' } },
                 timeScale: { timeVisible: true, secondsVisible: true, borderColor: isLightMode ? '#e5e7eb' : '#16181e', rightOffset: 12, shiftVisibleRangeOnNewBar: true },
                 rightPriceScale: { borderColor: isLightMode ? '#e5e7eb' : '#16181e' },
-                crosshair: { mode: 0 }
+                crosshair: { mode: 0 },
+                handleScale: { axisPressedMouseMove: true },
+                handleScroll: { mouseWheel: true, vertTouchDrag: true }
             });
             setChartType('candle');
             const resize = () => chart.resize(el.clientWidth, el.clientHeight);
             window.addEventListener('resize', resize);
             new ResizeObserver(resize).observe(el);
+        }
+
+        // Build candles from live ticks for real-time updates
+        let tickBuffer = [];
+        const TICK_CANDLE_INTERVAL = 60; // 60 seconds per candle
+
+        function updateChartFromTicks(tick) {
+            const now = Math.floor(Date.now() / 1000);
+            const candleTime = Math.floor(now / TICK_CANDLE_INTERVAL) * TICK_CANDLE_INTERVAL;
+            const price = parseFloat(tick);
+            
+            if (chartData.length === 0 || chartData[chartData.length - 1].time < candleTime) {
+                // New candle
+                const newCandle = {
+                    time: candleTime,
+                    open: price,
+                    high: price,
+                    low: price,
+                    close: price
+                };
+                chartData.push(newCandle);
+                if (chartData.length > 200) chartData.shift();
+            } else {
+                // Update current candle
+                const lastCandle = chartData[chartData.length - 1];
+                lastCandle.high = Math.max(lastCandle.high, price);
+                lastCandle.low = Math.min(lastCandle.low, price);
+                lastCandle.close = price;
+            }
+            
+            // Update chart
+            if (chartType === 'candle') {
+                activeSeries.update(chartData[chartData.length - 1]);
+            } else {
+                activeSeries.update({ time: candleTime, value: price });
+            }
+        }
+
+        function startChartRefresh() {
+            if (chartRefreshInterval) clearInterval(chartRefreshInterval);
+            chartRefreshInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ ticks: currentSymbol, subscribe: 1 }));
+                }
+            }, CHART_REFRESH_MS);
+        }
+
+        function stopChartRefresh() {
+            if (chartRefreshInterval) {
+                clearInterval(chartRefreshInterval);
+                chartRefreshInterval = null;
+            }
         }
 
         function setChartType(type) {
@@ -1325,7 +1381,7 @@
                     updateAccountBadge(acc.loginid);
                     document.getElementById('balance').innerText = `${acc.currency} ${currentBalance.toLocaleString()}`;
                     
-                    ws.send(JSON.stringify({ ticks: currentSymbol, subscribe: 1 }));
+ws.send(JSON.stringify({ ticks: currentSymbol, subscribe: 1 }));
                     ws.send(JSON.stringify({ ticks_history: currentSymbol, count: 100, end: 'latest', granularity: 60, style: 'candles', subscribe: 1 }));
                     
                     // Fixed Balance Subscription
@@ -1334,6 +1390,8 @@
 
 ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                     updateStakeDisplay();
+                    startPayoutRefresh();
+                    startChartRefresh();
                     
                     // Resume Bot if needed
                     if (botState.running) {
@@ -1395,6 +1453,9 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                     display.innerText = quote;
                     display.className = 'font-mono text-xs font-bold leading-none ' + (price >= parseFloat(display.dataset.last || 0) ? 'price-up' : 'price-down');
                     display.dataset.last = price;
+                    
+                    // Update chart in real-time from ticks
+                    updateChartFromTicks(quote);
                 }
 
                 if (data.msg_type === 'ohlc' && data.ohlc) {
@@ -1452,6 +1513,8 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
             };
 
             ws.onclose = (e) => {
+                stopPayoutRefresh();
+                stopChartRefresh();
                 if (!e.wasClean && document.getElementById('bot-auto-reconnect')?.checked) {
                     const delay = Math.min(30000, Math.pow(2, wsReconnectAttempts) * 1000);
                     logBot(`Connection lost. Reconnecting in ${delay/1000}s...`, 'loss');
@@ -1907,7 +1970,7 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
             if (dUnit === 's' && parseInt(dValEl.value) > 60) dValEl.value = 60;
             if (dUnit === 'm' && parseInt(dValEl.value) > 1440) dValEl.value = 1440;
 
-            if (proposalStreamIds.length > 0) { ws.send(JSON.stringify({ forget_all: "proposal" })); proposalStreamIds = []; }
+            // Only clear proposals when changing market type, otherwise just update
             
             const cat = document.getElementById('trade-category').value;
             let amount = parseFloat(document.getElementById('stake').value);
@@ -1941,6 +2004,22 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
             
             const types = catToTypes[cat] || [];
             types.forEach(type => sendReq(type));
+        }
+
+        function startPayoutRefresh() {
+            if (payoutRefreshInterval) clearInterval(payoutRefreshInterval);
+            payoutRefreshInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    updatePayouts();
+                }
+            }, PAYOUT_REFRESH_MS);
+        }
+
+        function stopPayoutRefresh() {
+            if (payoutRefreshInterval) {
+                clearInterval(payoutRefreshInterval);
+                payoutRefreshInterval = null;
+            }
         }
 
         function startGlobalTimer() {
@@ -2228,17 +2307,20 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
         function changeSymbol() {
             chartMarkers = []; activeMarkersMap.clear(); activePriceLines.clear();
             chartData = [];
+            // Restart tick stream for real-time updates
+            stopChartRefresh();
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ forget_all: ["ticks", "candles"] })); activeSeries.setData([]);
+                ws.send(JSON.stringify({ forget_all: ["ticks", "candles"] }));
                 ws.send(JSON.stringify({ ticks: currentSymbol, subscribe: 1 }));
                 ws.send(JSON.stringify({ ticks_history: currentSymbol, count: 100, end: 'latest', granularity: 60, style: 'candles', subscribe: 1 }));
             }
-        activeTrades.forEach(contract => {
-            if (contract.underlying === currentSymbol && contract.entry_spot && !contract.is_sold && ['CALL', 'PUT'].includes(contract.contract_type)) {
-                createEntryLine(contract.contract_id, contract.entry_spot);
-            }
-        });
+            activeTrades.forEach(contract => {
+                if (contract.underlying === currentSymbol && contract.entry_spot && !contract.is_sold && ['CALL', 'PUT'].includes(contract.contract_type)) {
+                    createEntryLine(contract.contract_id, contract.entry_spot);
+                }
+            });
             updatePayouts();
+            startChartRefresh();
         }
 
         function selectDigit(d) {
@@ -2353,7 +2435,7 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
             }).join('');
         }
 
-        function switchAccount(token) { if (token === activeToken) return; activeToken = token; if (ws) ws.close(); activeTrades.clear(); activeMarkersMap.clear(); activePriceLines.clear(); tradeHistory = []; renderAccounts(); connectWS(activeToken); }
+        function switchAccount(token) { if (token === activeToken) return; stopPayoutRefresh(); stopChartRefresh(); activeToken = token; if (ws) ws.close(); activeTrades.clear(); activeMarkersMap.clear(); activePriceLines.clear(); tradeHistory = []; renderAccounts(); connectWS(activeToken); }
 
         // --- Resizer Logic ---
         const resizer = document.getElementById('resizer-handle');
