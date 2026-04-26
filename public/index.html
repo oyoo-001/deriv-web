@@ -65,6 +65,16 @@
 
         /* Digit Glow Animation */
         .digit-glow { box-shadow: 0 0 15px #3b82f6; border-color: #60a5fa !important; background-color: #1d4ed8 !important; color: white !important; transform: scale(1.1); z-index: 10; }
+
+        /* Trade Button Styles - Deriv-like */
+        .trade-btn-call { background: linear-gradient(135deg, #00e198 0%, #00cc8a 100%); color: #0d0e12; border: 1px solid #00ffad; }
+        .trade-btn-call:hover { background: linear-gradient(135deg, #00ffad 0%, #00e198 100%); box-shadow: 0 4px 20px rgba(0, 255, 173, 0.4); transform: translateY(-2px); }
+        .trade-btn-call:active { transform: translateY(0); }
+        .trade-btn-put { background: linear-gradient(135deg, #ff4d4d 0%, #e64444 100%); color: #ffffff; border: 1px solid #ff4444; }
+        .trade-btn-put:hover { background: linear-gradient(135deg, #ff6666 0%, #ff4d4d 100%); box-shadow: 0 4px 20px rgba(255, 68, 68, 0.4); transform: translateY(-2px); }
+        .trade-btn-put:active { transform: translateY(0); }
+        .trade-btn-even { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; border: 1px solid #60a5fa; }
+        .trade-btn-odd { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; border: 1px solid #a78bfa; }
         
         /* Target Highlights for Even/Odd */
         .digit-even-target { border-color: #3b82f6; color: #60a5fa; background-color: rgba(59, 130, 246, 0.1); }
@@ -620,7 +630,7 @@
                     <div id="tab-content-trade" class="flex flex-col gap-4">
                         <div>
                             <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Market Type</label>
-                            <select id="trade-category" onchange="toggleTradeInputs()" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
+                            <select id="trade-category" onchange="toggleTradeInputs(); updateContractTypeLabel();" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
                                 <option value="RISEFALL">Rise / Fall</option>
                                 <option value="HIGHERLOWER">Higher / Lower</option>
                                 <option value="TOUCHNOTOUCH">Touch / No Touch</option>
@@ -634,10 +644,16 @@
                             </select>
                         </div>
 
+                        <!-- Contract Type Header -->
+                        <div id="contract-type-header" class="theme-bg-card theme-border border rounded-lg p-2 mt-1">
+                            <span class="text-[10px] theme-text-sec font-bold uppercase tracking-wider">Rise/Fall</span>
+                            <span class="text-[10px] theme-text-sec float-right">Volatility 100 Index</span>
+                        </div>
+
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Stake ($)</label>
-                                <input id="stake" type="number" value="0.35" placeholder="min 0.35" step="0.01" onchange="updatePayouts()" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
+                                <input id="stake" type="number" value="0.35" placeholder="min 0.35" step="0.01" oninput="updatePayouts(); updateStakeDisplay();" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
                             </div>
                             <div>
                                 <label class="text-[10px] theme-text-sec block mb-1 font-bold uppercase tracking-wider">Duration</label>
@@ -648,6 +664,14 @@
                                         <option value="m">Min</option>
                                     </select>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Potential Payout Display -->
+                        <div class="theme-bg-card theme-border border rounded-lg p-3 mt-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] theme-text-sec font-bold uppercase">Potential Payout</span>
+                                <span id="potential-payout" class="text-lg font-black text-[#00ffad]">$0.70</span>
                             </div>
                         </div>
 
@@ -677,58 +701,58 @@
 
                         <!-- Action Sections -->
                         <div id="action-risefall" class="grid grid-cols-2 gap-3 mt-2">
-                            <button onclick="trade('CALL')" class="bg-[#00ffad] text-black font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
+                            <button onclick="trade('CALL')" class="trade-btn-call font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm flex items-center gap-1"><i data-lucide="trending-up" class="w-4 h-4"></i> RISE</span>
-                                <span id="payout-call" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-call" class="text-[9px] font-bold">--</span>
                             </button>
-                            <button onclick="trade('PUT')" class="bg-[#ff4444] text-white font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
+                            <button onclick="trade('PUT')" class="trade-btn-put font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm flex items-center gap-1"><i data-lucide="trending-down" class="w-4 h-4"></i> FALL</span>
-                                <span id="payout-put" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-put" class="text-[9px] font-bold text-white">--</span>
                             </button>
                         </div>
 
                         <div id="action-evenodd" class="hidden grid grid-cols-2 gap-3 mt-2">
-                            <button onclick="trade('DIGITEVEN')" class="bg-[#3b82f6] text-white font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center border border-blue-400">
+                            <button onclick="trade('DIGITEVEN')" class="trade-btn-even font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm">EVEN</span>
-                                <span id="payout-even" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-even" class="text-[9px] font-bold">--</span>
                             </button>
-                            <button onclick="trade('DIGITODD')" class="bg-[#8b5cf6] text-white font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center border border-purple-400">
+                            <button onclick="trade('DIGITODD')" class="trade-btn-odd font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm">ODD</span>
-                                <span id="payout-odd" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-odd" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
                         <div id="action-digits" class="hidden grid grid-cols-2 gap-3">
                             <button onclick="trade('DIGITMATCH')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-2 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Matches</span>
-                                <span id="payout-match" class="text-[9px] opacity-70">...</span>
+                                <span id="payout-match" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('DIGITDIFF')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-2 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Differs</span>
-                                <span id="payout-diff" class="text-[9px] opacity-70">...</span>
+                                <span id="payout-diff" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
                         <div id="action-overunder" class="hidden grid grid-cols-2 gap-3">
                             <button onclick="trade('DIGITOVER')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-2 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Over</span>
-                                <span id="payout-over" class="text-[9px] opacity-70">...</span>
+                                <span id="payout-over" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('DIGITUNDER')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-2 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Under</span>
-                                <span id="payout-under" class="text-[9px] opacity-70">...</span>
+                                <span id="payout-under" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
                         <!-- Higher/Lower -->
                         <div id="action-higherlower" class="hidden grid grid-cols-2 gap-3 mt-2">
-                            <button onclick="trade('CALL')" class="bg-[#00ffad] text-black font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
+                            <button onclick="trade('CALL')" class="trade-btn-call font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm flex items-center gap-1"><i data-lucide="trending-up" class="w-4 h-4"></i> HIGHER</span>
-                                <span id="payout-higher" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-higher" class="text-[9px] font-bold">--</span>
                             </button>
-                            <button onclick="trade('PUT')" class="bg-[#ff4444] text-white font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
+                            <button onclick="trade('PUT')" class="trade-btn-put font-black py-3 rounded-xl hover:opacity-90 active:scale-95 transition shadow-lg flex flex-col items-center">
                                 <span class="text-sm flex items-center gap-1"><i data-lucide="trending-down" class="w-4 h-4"></i> LOWER</span>
-                                <span id="payout-lower" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-lower" class="text-[9px] font-bold text-white">--</span>
                             </button>
                         </div>
 
@@ -736,11 +760,11 @@
                         <div id="action-touchnotouch" class="hidden grid grid-cols-2 gap-3 mt-2">
                             <button onclick="trade('TICK')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-3 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-sm">TOUCH</span>
-                                <span id="payout-touch" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-touch" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('NOTICK')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-3 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-sm">NO TOUCH</span>
-                                <span id="payout-notouch" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-notouch" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
@@ -748,11 +772,11 @@
                         <div id="action-inout" class="hidden grid grid-cols-2 gap-3 mt-2">
                             <button onclick="trade('IN')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-3 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-sm">IN</span>
-                                <span id="payout-in" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-in" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('OUT')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-3 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-sm">OUT</span>
-                                <span id="payout-out" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-out" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
@@ -760,15 +784,15 @@
                         <div id="action-asian" class="hidden grid grid-cols-3 gap-2 mt-2">
                             <button onclick="trade('ASIANCALL')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-2 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Asian Up</span>
-                                <span id="payout-asiancall" class="text-[9px] opacity-70">...</span>
+                                <span id="payout-asiancall" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('ASIANPUT')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-2 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Asian Down</span>
-                                <span id="payout-asianput" class="text-[9px] opacity-70">...</span>
+                                <span id="payout-asianput" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('ASIAN')" class="theme-bg-card theme-border border border-blue-500 text-blue-500 font-black py-2 rounded-xl active:bg-blue-500 active:text-white transition flex flex-col items-center">
                                 <span class="text-xs uppercase">Asian</span>
-                                <span id="payout-asian" class="text-[9px] opacity-70">...</span>
+                                <span id="payout-asian" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
@@ -776,11 +800,11 @@
                         <div id="action-reset" class="hidden grid grid-cols-2 gap-3 mt-2">
                             <button onclick="trade('RESETCALL')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-3 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-sm">RESET CALL</span>
-                                <span id="payout-resetcall" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-resetcall" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('RESETPUT')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-3 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-sm">RESET PUT</span>
-                                <span id="payout-resetput" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-resetput" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
@@ -788,11 +812,11 @@
                         <div id="action-tickhighlow" class="hidden grid grid-cols-2 gap-3 mt-2">
                             <button onclick="trade('TICKHIGH')" class="theme-bg-card theme-border border border-[#00ffad] text-[#00ffad] font-black py-3 rounded-xl active:bg-[#00ffad] active:text-black transition flex flex-col items-center">
                                 <span class="text-sm">HIGH TICK</span>
-                                <span id="payout-tickhigh" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-tickhigh" class="text-[9px] font-bold">--</span>
                             </button>
                             <button onclick="trade('TICKLOW')" class="theme-bg-card theme-border border border-[#ff4444] text-[#ff4444] font-black py-3 rounded-xl active:bg-[#ff4444] active:text-white transition flex flex-col items-center">
                                 <span class="text-sm">LOW TICK</span>
-                                <span id="payout-ticklow" class="text-[10px] opacity-70">...</span>
+                                <span id="payout-ticklow" class="text-[9px] font-bold">--</span>
                             </button>
                         </div>
 
@@ -894,7 +918,6 @@
             const recoverySection = document.getElementById('recovery-settings');
             const multiLabel = recoverySection.querySelector('label');
             const multiInput = document.getElementById('bot-martingale');
-            const maxStakeInput = document.getElementById('bot-max-stake');
             
             if (['MARTINGALE', 'FIBONACCI', 'DALEMBERT', 'OSCAR_GRIND'].includes(strategy)) {
                 recoverySection.style.display = 'grid';
@@ -913,6 +936,44 @@
                 }
             } else {
                 recoverySection.style.display = 'none';
+            }
+            
+            // Update duration unit options based on strategy
+            updateBotDurationUnits(strategy);
+        }
+
+        function getValidDurationUnits(strategy) {
+            // Map strategies to valid duration units
+            if (['CALL', 'PUT', 'ALTERNATE', 'MARTINGALE', 'FIBONACCI', 'DALEMBERT', 'OSCAR_GRIND'].includes(strategy)) {
+                return ['t', 's', 'm']; // Ticks, Seconds, Minutes
+            }
+            if (['DIGITMATCH', 'DIGITDIFF', 'DIGITEVEN', 'DIGITODD', 'DIGITOVER', 'DIGITUNDER'].includes(strategy)) {
+                return ['t']; // Ticks only
+            }
+            if (['TICKHIGH', 'TICKLOW'].includes(strategy)) {
+                return ['t']; // Ticks only
+            }
+            return ['t']; // Default to ticks
+        }
+
+        function updateBotDurationUnits(strategy) {
+            const durUnit = document.getElementById('bot-duration-unit');
+            const validUnits = getValidDurationUnits(strategy);
+            
+            let options = '';
+            if (validUnits.includes('t')) options += '<option value="t">Ticks</option>';
+            if (validUnits.includes('s')) options += '<option value="s">Seconds</option>';
+            if (validUnits.includes('m')) options += '<option value="m">Minutes</option>';
+            
+            durUnit.innerHTML = options;
+            
+            // Reset to valid unit if current is invalid
+            if (!validUnits.includes(durUnit.value)) {
+                durUnit.value = validUnits[0];
+                // Enforce max duration
+                const durVal = document.getElementById('bot-duration-val');
+                if (durUnit.value === 't' && parseInt(durVal.value) > 10) durVal.value = 10;
+                if (durUnit.value === 's' && parseInt(durVal.value) > 60) durVal.value = 60;
             }
         }
 
@@ -1035,6 +1096,7 @@
                 connectWS(activeToken);
                 lucide.createIcons();
                 startGlobalTimer();
+                updateContractTypeLabel();
             }
         }
 
@@ -1170,6 +1232,7 @@
                 else btn.classList.remove('active');
             });
             changeSymbol();
+            updateContractTypeLabel();
         }
 
         function setupChart() {
@@ -1269,8 +1332,9 @@
                     ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
                     updatePayouts();
 
-                    ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
-
+ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
+                    updateStakeDisplay();
+                    
                     // Resume Bot if needed
                     if (botState.running) {
                         const hasActiveBotTrade = Array.from(botContractIds).some(id => {
@@ -1278,8 +1342,10 @@
                             return c && !c.is_sold;
                         });
                         if (!hasActiveBotTrade) {
-                            logBot("Resuming Bot Loop...", 'info');
-                            placeBotTrade();
+                            logBot("Resuming Bot Loop in 1s...", 'info');
+                            setTimeout(() => {
+                                if (botState.running) placeBotTrade();
+                            }, 1000);
                         }
                     }
                 }
@@ -1305,7 +1371,16 @@
                     let elId = `payout-${reqType.toLowerCase()}`;
                     elId = elId.replace('digit', '').replace('asian', 'asian').replace('reset', 'reset').replace('tick', 'tick').replace('notick', 'notouch');
                     const el = document.getElementById(elId);
-                    if(el) el.innerText = `${percent.toFixed(2)}%`;
+                    if(el) {
+                        el.innerHTML = `<span class="font-black">$${payout.toFixed(2)}</span><span class="opacity-70"> (${percent.toFixed(1)}%)</span>`;
+                    }
+                    // Update potential payout with highest value
+                    const currentDisplay = document.getElementById('potential-payout');
+                    if (currentDisplay && payout > parseFloat(currentDisplay.innerText.replace('$',''))) {
+                        currentDisplay.innerText = `$${payout.toFixed(2)}`;
+                    } else if (currentDisplay && currentDisplay.innerText === '$0.70') {
+                        currentDisplay.innerText = `$${payout.toFixed(2)}`;
+                    }
                 }
 
                 if (data.msg_type === 'tick' && data.tick) {
@@ -1407,6 +1482,26 @@
             botState.maxConsecutiveLosses = parseInt(document.getElementById('bot-max-consecutive').value) || 5;
             botState.stakePercent = parseFloat(document.getElementById('bot-stake-percent').value) || 0;
             
+            // Validate duration based on strategy type
+            const validUnits = getValidDurationUnits(botState.strategy);
+            if (!validUnits.includes(botState.durationUnit)) {
+                logBot(`Invalid duration unit for ${botState.strategy}. Using Ticks.`, 'loss');
+                botState.durationUnit = 't';
+                document.getElementById('bot-duration-unit').value = 't';
+            }
+            
+            // Enforce max duration
+            if (botState.durationUnit === 't' && botState.duration > 10) {
+                botState.duration = 10;
+                document.getElementById('bot-duration-val').value = 10;
+            } else if (botState.durationUnit === 's' && botState.duration > 60) {
+                botState.duration = 60;
+                document.getElementById('bot-duration-val').value = 60;
+            } else if (botState.durationUnit === 'm' && botState.duration > 1440) {
+                botState.duration = 1440;
+                document.getElementById('bot-duration-val').value = 1440;
+            }
+            
             botState.runsCount = 0;
             botState.totalProfit = 0;
             botState.dailyProfit = 0;
@@ -1426,7 +1521,7 @@
             updateStrategyUI();
             updateBotStatsUI();
             
-            logBot(`Starting ${botState.strategy} Bot | Stake: $${botState.initialStake}`, 'success');
+            logBot(`Starting ${botState.strategy} Bot | Stake: $${botState.initialStake} | Duration: ${botState.duration}${botState.durationUnit}`, 'success');
             placeBotTrade();
             saveSession();
         }
@@ -1478,6 +1573,15 @@
 
         function placeBotTrade() {
             if (!botState.running) return;
+            
+            // Check WebSocket connection
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                logBot("Waiting for connection...", 'loss');
+                setTimeout(() => {
+                    if (botState.running) placeBotTrade();
+                }, 2000);
+                return;
+            }
             
             if (botState.maxRuns > 0 && botState.runsCount >= botState.maxRuns) {
                 logBot("Target Run Count Reached.", 'success');
@@ -1556,6 +1660,7 @@
             
             logBot(`R#${botState.runsCount} ${isWin ? 'WIN' : 'LOSS'}: $${profit.toFixed(2)} | Net: $${botState.totalProfit.toFixed(2)} | Streak: ${botState.consecutiveLosses}`, isWin ? 'win' : 'loss');
 
+            // Check stop conditions FIRST
             if (botState.totalProfit >= botState.tp) {
                 logBot("Target Profit Achieved!", 'success');
                 playSound('success');
@@ -1579,6 +1684,7 @@
                 return;
             }
 
+            // Calculate next stake
             const strategy = botState.strategy;
             if (['MARTINGALE', 'FIBONACCI', 'DALEMBERT', 'OSCAR_GRIND'].includes(strategy)) {
                 botState.stake = calculateStake(isWin, strategy);
@@ -1587,15 +1693,21 @@
                 botState.stake = botState.initialStake;
             }
 
-            if (document.getElementById('bot-notify')?.checked) {
-                if (isWin) {
+            // Notify
+            if (document.getElementById('bot-notify')?.checked && isWin) {
+                try {
                     new Notification('Trade Won', { body: `$${profit.toFixed(2)} profit!` });
-                }
+                } catch(e) {}
             }
 
+            // Schedule next trade - ALWAYS continue unless stopped
+            const delay = 1500;
+            logBot(`Next trade in ${delay/1000}s...`, 'info');
             setTimeout(() => {
-                if (botState.running) placeBotTrade();
-            }, 2000);
+                if (botState.running) {
+                    placeBotTrade();
+                }
+            }, delay);
         }
 
         function logBot(msg, type = 'info') {
@@ -1789,7 +1901,11 @@
             
             const dValEl = document.getElementById('duration-val');
             const dUnit = document.getElementById('duration-unit').value;
+            
+            // Enforce max duration per unit type
             if (dUnit === 't' && parseInt(dValEl.value) > 10) dValEl.value = 10;
+            if (dUnit === 's' && parseInt(dValEl.value) > 60) dValEl.value = 60;
+            if (dUnit === 'm' && parseInt(dValEl.value) > 1440) dValEl.value = 1440;
 
             if (proposalStreamIds.length > 0) { ws.send(JSON.stringify({ forget_all: "proposal" })); proposalStreamIds = []; }
             
@@ -2021,9 +2137,33 @@
             barrierInput.classList.add('hidden');
             lastDigitInput.classList.add('hidden');
             
+            // Reset potential payout display
+            const stake = parseFloat(document.getElementById('stake').value) || 0.35;
+            document.getElementById('potential-payout').innerText = `$${stake.toFixed(2)}`;
+            document.getElementById('potential-payout').classList.remove('text-red-500');
+            document.getElementById('potential-payout').classList.add('text-[#00ffad]');
+            
+            // Update header with market type and symbol
+            const labelMap = {
+                'RISEFALL': 'Rise/Fall',
+                'HIGHERLOWER': 'Higher/Lower',
+                'TOUCHNOTOUCH': 'Touch/No Touch',
+                'INOUT': 'In/Out',
+                'ASIAN': 'Asians',
+                'EVENODD': 'Even/Odd',
+                'DIGITS': 'Digits',
+                'OVERUNDER': 'Over/Under',
+                'RESET': 'Reset Call/Put',
+                'TICKHIGHLOW': 'High/Low Ticks'
+            };
+            const headerEl = document.getElementById('contract-type-header');
+            if(headerEl) {
+                headerEl.querySelector('span').innerText = labelMap[cat] || cat;
+                headerEl.querySelectorAll('span')[1].innerText = currentSymbolName;
+            }
+            
             if (cat === 'RISEFALL' || cat === 'HIGHERLOWER') {
                 document.getElementById(cat === 'RISEFALL' ? 'action-risefall' : 'action-higherlower').classList.remove('hidden');
-            } else if (cat === 'EVENODD') {
                 digitSelector.classList.remove('hidden');
                 document.getElementById('action-evenodd').classList.remove('hidden');
                 digitSelector.classList.add('pointer-events-none');
@@ -2049,18 +2189,38 @@
                 document.getElementById('action-tickhighlow').classList.remove('hidden');
             }
 
+            // Duration unit rules per trade type
             const durUnit = document.getElementById('duration-unit');
             const oldVal = durUnit.value;
-            durUnit.innerHTML = '<option value="t">Ticks</option>';
-            if (cat === 'RISEFALL' || cat === 'HIGHERLOWER' || cat === 'ASIAN' || cat === 'INOUT') {
-                durUnit.innerHTML += '<option value="m">Minutes</option>';
+            
+            // Default: Ticks only
+            let options = '<option value="t">Ticks</option>';
+            
+            // Rise/Fall, Higher/Lower: Ticks, Seconds, Minutes
+            if (cat === 'RISEFALL' || cat === 'HIGHERLOWER') {
+                options = '<option value="t">Ticks</option><option value="s">Seconds</option><option value="m">Minutes</option>';
             }
-            if (cat === 'TOUCHNOTOUCH' || cat === 'RESET') {
-                durUnit.innerHTML += '<option value="s">Seconds</option>';
+            // Touch/No Touch, Reset: Ticks, Seconds
+            else if (cat === 'TOUCHNOTOUCH' || cat === 'RESET') {
+                options = '<option value="t">Ticks</option><option value="s">Seconds</option>';
             }
-            if (oldVal === 'm' && durUnit.querySelector(`option[value="m"]`)) durUnit.value = 'm';
-            else if (oldVal === 's' && durUnit.querySelector(`option[value="s"]`)) durUnit.value = 's';
+            // In/Out, Asians: Minutes only
+            else if (cat === 'INOUT' || cat === 'ASIAN') {
+                options = '<option value="m">Minutes</option>';
+            }
+            // Even/Odd, Digits, Over/Under, Tick High/Low: Ticks only (already default)
+            
+            durUnit.innerHTML = options;
+            
+            // Preserve valid selection or default to Ticks
+            if (oldVal === 'm' && options.includes('value="m"')) durUnit.value = 'm';
+            else if (oldVal === 's' && options.includes('value="s"')) durUnit.value = 's';
             else durUnit.value = 't';
+            
+            // Enforce max ticks for tick-based trades
+            const dValEl = document.getElementById('duration-val');
+            if (durUnit.value === 't' && parseInt(dValEl.value) > 10) dValEl.value = 10;
+            if (durUnit.value === 's' && parseInt(dValEl.value) > 60) dValEl.value = 60;
 
             updatePayouts();
         }
@@ -2089,6 +2249,33 @@
                 if(!isSelected) { b.classList.remove('border-red-500', 'text-red-500'); b.classList.add('theme-border', 'border'); }
             });
             updatePayouts();
+            updateStakeDisplay();
+        }
+
+        function updateStakeDisplay() {
+            const stake = parseFloat(document.getElementById('stake').value) || 0.35;
+            document.getElementById('potential-payout').innerText = `$${stake.toFixed(2)}`;
+        }
+
+        function updateContractTypeLabel() {
+            const cat = document.getElementById('trade-category').value;
+            const labelMap = {
+                'RISEFALL': 'Rise/Fall',
+                'HIGHERLOWER': 'Higher/Lower',
+                'TOUCHNOTOUCH': 'Touch/No Touch',
+                'INOUT': 'In/Out',
+                'ASIAN': 'Asians',
+                'EVENODD': 'Even/Odd',
+                'DIGITS': 'Digits',
+                'OVERUNDER': 'Over/Under',
+                'RESET': 'Reset Call/Put',
+                'TICKHIGHLOW': 'High/Low Ticks'
+            };
+            const label = labelMap[cat] || cat;
+            const headerEl = document.getElementById('contract-type-header');
+            if(headerEl) {
+                headerEl.querySelector('span').innerText = label;
+            }
         }
 
         function showToast(msg, type) {
