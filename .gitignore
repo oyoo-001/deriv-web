@@ -1,2 +1,45 @@
-# Ignore all `.env` files
+# Dependencies
+node_modules/
+
+# Environment files
 *.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Package files
+package-lock.json
+
+# Build output
+dist/
+build/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug logs
+node_modules/.package-lock.json
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Test coverage
+coverage/
+
+# Credentials & keys
+*.pem
+*.key
