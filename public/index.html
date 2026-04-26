@@ -690,13 +690,13 @@
                         <!-- Barrier Input for Touch/No Touch & In/Out -->
                         <div id="barrier-input-container" class="hidden theme-border border-t pt-3 mt-2 mb-3">
                             <label class="text-[10px] theme-text-sec block mb-2 font-bold uppercase tracking-wider">Barrier</label>
-                            <input id="trade-barrier" type="number" step="0.0001" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
+                            <input id="trade-barrier" type="number" step="0.0001" oninput="updatePayouts()" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold">
                         </div>
 
                         <!-- Last Digit Prediction -->
                         <div id="lastdigit-input-container" class="hidden theme-border border-t pt-3 mt-2 mb-3">
                             <label class="text-[10px] theme-text-sec block mb-2 font-bold uppercase tracking-wider">Last Digit Prediction</label>
-                            <input id="trade-lastdigit" type="number" min="0" max="9" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold" value="5">
+                            <input id="trade-lastdigit" type="number" min="0" max="9" oninput="selectedDigit = parseInt(this.value); updatePayouts();" class="w-full theme-bg-input theme-border border rounded-lg p-2 focus:outline-none focus:border-red-500 text-sm font-bold" value="5">
                         </div>
 
                         <!-- Action Sections -->
@@ -864,7 +864,9 @@
         let isLightMode = false;
         let proposalStreamIds = [];
         let chartRefreshInterval = null;
+        let payoutRefreshInterval = null;
         const CHART_REFRESH_MS = 250; // Refresh chart every 250ms for real-time ticks
+        const PAYOUT_REFRESH_MS = 500; // Refresh payouts every 500ms
         let confirmAction = null;
         let botContractIds = new Set();
         let chartData = [];
@@ -1426,8 +1428,21 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                     const stake = parseFloat(data.proposal.ask_price);
                     const percent = ((payout - stake) / stake) * 100;
                     const reqType = data.echo_req.contract_type;
-                    let elId = `payout-${reqType.toLowerCase()}`;
-                    elId = elId.replace('digit', '').replace('asian', 'asian').replace('reset', 'reset').replace('tick', 'tick').replace('notick', 'notouch');
+                    const currentCat = document.getElementById('trade-category').value;
+                    
+                    // Determine correct payout element ID based on contract type and category
+                    let elId = '';
+                    if (['CALL', 'PUT'].includes(reqType)) {
+                        if (currentCat === 'HIGHERLOWER') {
+                            elId = `payout-${reqType === 'CALL' ? 'higher' : 'lower'}`;
+                        } else {
+                            elId = `payout-${reqType.toLowerCase()}`;
+                        }
+                    } else {
+                        elId = `payout-${reqType.toLowerCase()}`;
+                        elId = elId.replace('digit', '').replace('asian', 'asian').replace('reset', 'reset').replace('tick', 'tick').replace('notick', 'notouch');
+                    }
+                    
                     const el = document.getElementById(elId);
                     if(el) {
                         el.innerHTML = `<span class="font-black">$${payout.toFixed(2)}</span><span class="opacity-70"> (${percent.toFixed(1)}%)</span>`;
@@ -2241,8 +2256,11 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                 headerEl.querySelectorAll('span')[1].innerText = currentSymbolName;
             }
             
-            if (cat === 'RISEFALL' || cat === 'HIGHERLOWER') {
-                document.getElementById(cat === 'RISEFALL' ? 'action-risefall' : 'action-higherlower').classList.remove('hidden');
+            if (cat === 'RISEFALL') {
+                document.getElementById('action-risefall').classList.remove('hidden');
+            } else if (cat === 'HIGHERLOWER') {
+                document.getElementById('action-higherlower').classList.remove('hidden');
+            } else if (cat === 'EVENODD') {
                 digitSelector.classList.remove('hidden');
                 document.getElementById('action-evenodd').classList.remove('hidden');
                 digitSelector.classList.add('pointer-events-none');
@@ -2325,6 +2343,7 @@ ws.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
 
         function selectDigit(d) {
             selectedDigit = d;
+            document.getElementById('trade-lastdigit').value = d;
             document.querySelectorAll('.digit-btn').forEach(b => {
                 const isSelected = parseInt(b.dataset.digit) === d;
                 b.classList.toggle('border-red-500', isSelected); b.classList.toggle('text-red-500', isSelected);
